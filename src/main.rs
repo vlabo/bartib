@@ -77,6 +77,37 @@ fn main() -> Result<()> {
         ])
         .takes_value(false);
 
+    let arg_current_month = Arg::with_name("current_month")
+        .long("current_month")
+        .help("show activities of the current month")
+        .required(false)
+        .conflicts_with_all(&[
+            "from_date",
+            "to_date",
+            "date",
+            "today",
+            "yesterday",
+            "current_week",
+            "last_week",
+        ])
+        .takes_value(false);
+
+    let arg_last_month = Arg::with_name("last_month")
+        .long("last_month")
+        .help("show activities of the current month")
+        .required(false)
+        .conflicts_with_all(&[
+            "from_date",
+            "to_date",
+            "date",
+            "today",
+            "yesterday",
+            "current_week",
+            "last_week",
+            "current_month",
+        ])
+        .takes_value(false);
+
     let arg_group = Arg::with_name("round")
         .long("round")
         .help("rounds the start and end time to the nearest duration. Durations can be in minutes or hours. E.g. 15m or 4h")
@@ -161,6 +192,8 @@ fn main() -> Result<()> {
                 .arg(&arg_yesterday)
                 .arg(&arg_current_week)
                 .arg(&arg_last_week)
+                .arg(&arg_current_month)
+                .arg(&arg_last_month)
                 .arg(&arg_group)
                 .arg(
                     Arg::with_name("project")
@@ -196,6 +229,8 @@ fn main() -> Result<()> {
                 .arg(&arg_yesterday)
                 .arg(&arg_current_week)
                 .arg(&arg_last_week)
+                .arg(&arg_current_month)
+                .arg(&arg_last_month)
                 .arg(&arg_group)
                 .arg(
                     Arg::with_name("project")
@@ -388,6 +423,32 @@ fn create_filter_for_arguments<'a>(sub_m: &'a ArgMatches) -> ActivityFilter<'a> 
                 - Duration::weeks(1)
                 + Duration::days(6),
         )
+    }
+
+    if sub_m.is_present("current_month") {
+        filter.from_date = Some(NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap());
+        if today.month() != 12 {
+            filter.to_date = Some(
+                NaiveDate::from_ymd_opt(today.year(), today.month() + 1, 1).unwrap()
+                    - Duration::days(1),
+            );
+        } else {
+            filter.to_date = Some(NaiveDate::from_ymd_opt(today.year(), 12, 31).unwrap());
+        }
+    }
+
+    if sub_m.is_present("last_month") {
+        if today.month() > 1 {
+            filter.from_date =
+                Some(NaiveDate::from_ymd_opt(today.year(), today.month() - 1, 1).unwrap());
+            filter.to_date = Some(
+                NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap()
+                    - Duration::days(1),
+            );
+        } else {
+            filter.from_date = Some(NaiveDate::from_ymd_opt(today.year() - 1, 12, 1).unwrap());
+            filter.to_date = Some(NaiveDate::from_ymd_opt(today.year() - 1, 12, 31).unwrap());
+        }
     }
 
     filter
